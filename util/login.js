@@ -11,17 +11,15 @@ async function login() {
     try {
         browser = await puppeteer.launch(puppeteerConfig);
 
-       
         logger.info("打开 ChatGPT");
         chatGPTPage = await browser.newPage();
         logger.debug("Starting new HTTP connection: https://chat.openai.com");
         const response = await chatGPTPage.goto("https://chat.openai.com");
         if (response.status() === 200) {
             logger.debug(response.url() + " " + response.request().method() + " " + response.status());
-        } else {
+        } else if (response.status()) {
             logger.error(response.url() + " " + response.request().method() + " " + response.status());
         }
-       
 
         await chatGPTPage.evaluate(() => {
             window.sessionStatuscode = false;
@@ -41,20 +39,20 @@ async function login() {
                 }
             }
         });
-        
+
         await Promise.race([
             chatGPTPage.waitForSelector('#__next > div.flex.min-h-full.w-screen.flex-col.sm\:supports-\[min-height\:100dvh\]\:min-h-\[100dvh\].md\:grid.md\:grid-cols-2.lg\:grid-cols-\[60\%_40\%\] > div.relative.flex.grow.flex-col.items-center.justify-between.bg-white.px-5.py-8.text-black.dark\:bg-black.dark\:text-white.sm\:rounded-t-\[30px\].md\:rounded-none.md\:px-6 > div.relative.flex.w-full.grow.flex-col.items-center.justify-center > div > div > button:nth-child(1)').then(() => isLogin = 0),
             chatGPTPage.waitForSelector('#__next > div.relative.z-0.flex.h-full.w-full.overflow-hidden > div.relative.flex.h-full.max-w-full.flex-1.flex-col.overflow-hidden > main > div.flex.h-full.flex-col > div.flex-1.overflow-hidden > div > div.absolute.left-0.right-0 > div > div.flex.items-center.gap-2').then(() => isLogin = 1)
         ]);
 
         const pages = await browser.pages();
-      for (let i = 0; i < pages.length; i++) {
-          const url = pages[i].url();
-          if (!url.includes("chat.openai.com")) {
-              await pages[i].close();
-          }
-      }
-await chatGPTPage.waitForSelector('#__next > div.relative.z-0.flex.h-full.w-full.overflow-hidden > div.relative.flex.h-full.max-w-full.flex-1.flex-col.overflow-hidden > main > div.flex.h-full.flex-col > div.flex-1.overflow-hidden > div > div.absolute.left-0.right-0 > div > div.flex.items-center.gap-2').then(() => isLogin = 1);
+        for (let i = 0; i < pages.length; i++) {
+            const url = pages[i].url();
+            if (!url.includes("chat.openai.com")) {
+                await pages[i].close();
+            }
+        }
+        await chatGPTPage.waitForSelector('#__next > div.relative.z-0.flex.h-full.w-full.overflow-hidden > div.relative.flex.h-full.max-w-full.flex-1.flex-col.overflow-hidden > main > div.flex.h-full.flex-col > div.flex-1.overflow-hidden > div > div.absolute.left-0.right-0 > div > div.flex.items-center.gap-2').then(() => isLogin = 1);
 
 
         if (isLogin == 0) {
@@ -99,7 +97,6 @@ await chatGPTPage.waitForSelector('#__next > div.relative.z-0.flex.h-full.w-full
 
 
 
-
         let textareaSelector = '#prompt-textarea';
         await waitForSelector(chatGPTPage, textareaSelector);
         const statusCode = await chatGPTPage.waitForFunction(() => {
@@ -108,8 +105,8 @@ await chatGPTPage.waitForSelector('#__next > div.relative.z-0.flex.h-full.w-full
             timeout: config.timeout
         }).then(() => chatGPTPage.evaluate(() => window.sessionStatuscode));
         if (statusCode === 429) {
-            logger.warn('Error: 429 Too Many Requests');
-        } 
+            logger.warn('429 Too Many Requests');
+        }
     } catch (error) {
         logger.error(error);
     } finally {
@@ -117,7 +114,7 @@ await chatGPTPage.waitForSelector('#__next > div.relative.z-0.flex.h-full.w-full
             return browser;
         }
     }
-       
+
 }
 
 
