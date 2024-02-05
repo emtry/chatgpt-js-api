@@ -16,7 +16,7 @@ env:
 
 jobs:
   main:
-    # 在 Debian 上运行
+    # 在 Ubuntu 上运行
     runs-on: ubuntu-latest
     steps:
       # git checkout 代码
