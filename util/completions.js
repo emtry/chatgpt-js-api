@@ -26,11 +26,12 @@ async function completions(browser) {
                 await chatgpt.sendInNewChat(JSON.stringify(reqbody.messages));
             }, req.body);
 
-            try {
-                chatGPTPage.waitForSelector("form div.absolute.bottom-2.right-2", {
-                    timeout: 2000
-                });
-            } catch (error) {}
+            await new Promise((resolve) => {
+                const delay = 2000;
+                setTimeout(() => {
+                    resolve();
+                }, delay);
+            });
 
             const result = await chatGPTPage.evaluate(async () => {
                 await chatgpt.isIdle();
