@@ -41,7 +41,7 @@ async function login() {
         });
 
         await Promise.race([
-            chatGPTPage.waitForSelector('#__next > div.flex.min-h-full.w-screen.flex-col.sm\:supports-\[min-height\:100dvh\]\:min-h-\[100dvh\].md\:grid.md\:grid-cols-2.lg\:grid-cols-\[60\%_40\%\] > div.relative.flex.grow.flex-col.items-center.justify-between.bg-white.px-5.py-8.text-black.dark\:bg-black.dark\:text-white.sm\:rounded-t-\[30px\].md\:rounded-none.md\:px-6 > div.relative.flex.w-full.grow.flex-col.items-center.justify-center > div > div > button:nth-child(1)').then(() => isLogin = 0),
+            chatGPTPage.waitForSelector('#__next button:nth-child(1)').then(() => isLogin = 0),
             chatGPTPage.waitForSelector('#__next > div.relative.z-0.flex.h-full.w-full.overflow-hidden > div.relative.flex.h-full.max-w-full.flex-1.flex-col.overflow-hidden > main > div.flex.h-full.flex-col > div.flex-1.overflow-hidden > div > div.absolute.left-0.right-0 > div > div.flex.items-center.gap-2').then(() => isLogin = 1)
         ]);
 
@@ -52,7 +52,8 @@ async function login() {
                 await pages[i].close();
             }
         }
-        await chatGPTPage.waitForSelector('#__next > div.relative.z-0.flex.h-full.w-full.overflow-hidden > div.relative.flex.h-full.max-w-full.flex-1.flex-col.overflow-hidden > main > div.flex.h-full.flex-col > div.flex-1.overflow-hidden > div > div.absolute.left-0.right-0 > div > div.flex.items-center.gap-2').then(() => isLogin = 1);
+        
+        try {await chatGPTPage.waitForSelector('#__next > div.relative.z-0.flex.h-full.w-full.overflow-hidden > div.relative.flex.h-full.max-w-full.flex-1.flex-col.overflow-hidden > main > div.flex.h-full.flex-col > div.flex-1.overflow-hidden > div > div.absolute.left-0.right-0 > div > div.flex.items-center.gap-2', {timeout: 2000}).then(() => isLogin = 1);} catch (error) {}
 
 
         if (isLogin == 0) {
@@ -170,7 +171,7 @@ async function insertText(page, selector, text) {
     try {
         await page.type(selector, text);
     } catch (error) {
-        logger.error("插入文本时发生错误: " + error);
+        logger.error(error);
     }
 }
 

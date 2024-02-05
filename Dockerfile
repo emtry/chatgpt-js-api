@@ -1,6 +1,12 @@
 # 使用官方 Node.js 基础镜像
 FROM node:16-slim
 
+# 设置工作目录为 /app
+WORKDIR /app
+
+# 将当前目录内容复制到位于 /app 的容器中
+COPY . /app
+
 # 设置环境变量
 ENV USERNAME=""
 ENV PASSWORD=""
@@ -16,16 +22,10 @@ RUN apt update && apt install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# 定义挂载点
-VOLUME ["/app/UserData"]
-
 EXPOSE 8081
 
-# 设置工作目录为 /app
-WORKDIR /app
-
-# 将当前目录内容复制到位于 /app 的容器中
-COPY . /app
+# 定义挂载点
+VOLUME ["/app/UserData"]
 
 # 安装项目依赖
 RUN npm install
