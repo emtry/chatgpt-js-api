@@ -5,7 +5,7 @@ let config = {
     loglevel: process.env.LOGLEVEL || 'info', 
     proxy: process.env.PROXY || "", 
     timeout: process.env.TIMEOUT || 60000, 
-    headless: process.env.HEADLESS || false, 
+    headless: process.env.HEADLESS || "new", 
 };
 
 module.exports = config
