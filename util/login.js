@@ -107,14 +107,13 @@ async function login() {
         if (statusCode === 429) {
             logger.warn('429 Too Many Requests');
         }
+
+        return browser;
+        
     } catch (error) {
         logger.error(error);
-    } finally {
-        if (browser) {
-            return browser;
-        }
+        process.exit(1);
     }
-
 }
 
 
