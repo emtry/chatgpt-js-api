@@ -1,11 +1,5 @@
 # 使用官方 Node.js 基础镜像
-FROM node:16
-
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt update && apt install -y --no-install-recommends \
-    ca-certificates fonts-liberation libasound2 libatk-bridge2.0-0 libatk1.0-0 libcups2 libdbus-1-3 libgdk-pixbuf2.0-0 libnspr4 libnss3 libxcomposite1 libxdamage1 libxrandr2 xdg-utils libxss1 libgbm1 libxkbcommon0 libpango-1.0-0 \
-    && apt clean \
-    && rm -rf /var/lib/apt/lists/*
+FROM node:16-slim
 
 # 设置工作目录为 /app
 WORKDIR /app
@@ -21,6 +15,27 @@ ENV LOGLEVEL="info"
 ENV PROXY=""
 ENV TIMEOUT=60000
 ENV HEADLESS="new"
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt update && apt install -y --no-install-recommends \
+    ca-certificates \
+    fonts-liberation \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libcups2 \
+    libdbus-1-3 \
+    libgdk-pixbuf2.0-0 \
+    libnspr4 \
+    libnss3 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    xdg-utils \
+    libxss1 \
+    libgbm1 \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # 定义挂载点
 VOLUME ["/app/UserData"]
