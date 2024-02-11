@@ -1,5 +1,5 @@
 # 使用官方 Node.js 基础镜像
-FROM node:16-slim
+FROM node:16
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && apt install -y --no-install-recommends \
