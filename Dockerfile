@@ -1,7 +1,6 @@
 # 使用官方 Node.js 基础镜像
 FROM node:16-slim
 
-ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && apt install -y --no-install-recommends \
     ca-certificates fonts-liberation libasound2 libatk-bridge2.0-0 libatk1.0-0 libcups2 libdbus-1-3 libgdk-pixbuf2.0-0 libnspr4 libnss3 libxcomposite1 libxdamage1 libxrandr2 xdg-utils libxss1 libgbm1 libxkbcommon0 libpango-1.0-0 \
     && apt clean \
@@ -14,13 +13,12 @@ WORKDIR /app
 COPY . /app
 
 # 设置环境变量
-ENV USERNAME=""
-ENV PASSWORD=""
+ENV USERNAME=example@mail.com
+ENV PASSWORD=password
 ENV PROCESS_WORKERS=2
-ENV LOGLEVEL="info"
-ENV PROXY=""
+ENV LOGLEVEL=info
+ENV PROXY=http://127.0.0.1:1080
 ENV TIMEOUT=60000
-ENV HEADLESS="\"new\""
 
 # 定义挂载点
 VOLUME ["/app/UserData"]
