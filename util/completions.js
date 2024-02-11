@@ -56,7 +56,12 @@ async function completions(browser) {
                 "id": "chatcmpl-" + result.all.id,
                 "model": "gpt-4",
                 "object": "chat.completion",
-                "system_fingerprint": null
+                "system_fingerprint": null,
+                "usage":{
+                    "completion_tokens":0,
+                    "prompt_tokens":0,
+                    "total_tokens":0
+                }
             });
 
             browserManager.markPageAsIdle(chatGPTPage);
