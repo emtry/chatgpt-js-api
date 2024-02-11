@@ -1,25 +1,9 @@
 # 使用官方 Node.js 基础镜像
 FROM node:16-slim
 
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && apt install -y --no-install-recommends \
-    ca-certificates \
-    fonts-liberation \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libcups2 \
-    libdbus-1-3 \
-    libgdk-pixbuf2.0-0 \
-    libnspr4 \
-    libnss3 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    xdg-utils \
-    libxss1 \
-    libgbm1 \
-    libxkbcommon0 \
-    libpango-1.0-0 \
+    ca-certificates fonts-liberation libasound2 libatk-bridge2.0-0 libatk1.0-0 libcups2 libdbus-1-3 libgdk-pixbuf2.0-0 libnspr4 libnss3 libxcomposite1 libxdamage1 libxrandr2 xdg-utils libxss1 libgbm1 libxkbcommon0 libpango-1.0-0 \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
