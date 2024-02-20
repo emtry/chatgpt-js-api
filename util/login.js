@@ -115,6 +115,7 @@ async function login() {
 
         await executeWithRetry(chatGPTPage).then(() => {}).catch(error => {
             logger.error('exit');
+            process.exit(1);
         });
 
 
