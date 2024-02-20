@@ -73,7 +73,7 @@ async function completions(browser) {
                 
                 res.json(response);
 
-                logger.debug("response: " + response);
+                logger.debug("response: " + JSON.stringify(response));
                 logger.info("response message: " + msg);
 
                 browserManager.markPageAsIdle(chatGPTPage);
@@ -181,7 +181,11 @@ class BrowserManager extends EventEmitter {
         });
     }
 
-    markPageAsIdle(page) {
+    async markPageAsIdle(page) {
+        await page.goto("https://chat.openai.com/?model=gpt-4");
+        await page.addScriptTag({
+            path: path.join(__dirname, 'chatgpt.js')
+        });        
         const index = this.pages.indexOf(page);
         if (index !== -1) {
             this.pageIdleFlags[index] = true;
