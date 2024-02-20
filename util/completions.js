@@ -1,5 +1,6 @@
 const config = require("../config");
 const express = require('express');
+const cors = require('cors');
 const path = require('path');
 const EventEmitter = require('events');
 const logger = require('./log');
@@ -11,17 +12,21 @@ async function completions(browser) {
     const app = express();
     const PORT = 8081;
     app.use(express.json());
+    app.use(cors());
     app.listen(PORT, () => {
         logger.info(`Server is running on http://localhost:${PORT}`);
     });
 
 
     app.post('/v1/chat/completions', async (req, res) => {
-        logger.info("New Request");
+        logger.info("new request");
+        logger.debug("request: " + JSON.stringify(req.body));
+        logger.info("model: " + req.body.model);
+        logger.info("message: " + JSON.stringify(req.body.messages));
+        
+        
         const chatGPTPage = await browserManager.getFreePage();
         try {
-            logger.info("model: " + req.body.model);
-            logger.info("message: " + JSON.stringify(req.body.messages));
             await chatGPTPage.evaluate(async (reqbody) => {
                 await chatgpt.sendInNewChat(JSON.stringify(reqbody.messages));
             }, req.body);
@@ -33,38 +38,93 @@ async function completions(browser) {
                 }, delay);
             });
 
-            const result = await chatGPTPage.evaluate(async () => {
-                await chatgpt.isIdle();
-                return {
-                    all: await chatgpt.getChatData('active', 'all', 'chatgpt', 'latest'),
-                    msg: await chatgpt.getChatData('active', 'msg', 'chatgpt', 'latest')
-                };
-            });
 
-            let msg = Array.isArray(result.msg) ? result.msg.join("\n") : result.msg
-            logger.info("response message: " + msg);
-            res.json({
-                "choices": [{
-                    "finish_reason": "stop",
-                    "index": 0,
-                    "message": {
-                        "content": msg,
-                        "role": "assistant"
+            // no stream
+            if (!req.body.stream){
+                const result = await chatGPTPage.evaluate(async () => {
+                    await chatgpt.isIdle();
+                    return {
+                        all: await chatgpt.getChatData('active', 'all', 'chatgpt', 'latest'),
+                        msg: await chatgpt.getChatData('active', 'msg', 'chatgpt', 'latest')
+                    };
+                });
+    
+                let msg = Array.isArray(result.msg) ? result.msg.join("\n") : result.msg
+                let response = {
+                    "choices": [{
+                        "index": 0,
+                        "finish_reason": "stop",
+                        "message": {
+                            "content": msg,
+                            "role": "assistant"
+                        }
+                    }],
+                    "created": new Date(result.all.update_time).getTime(),
+                    "id": "chatcmpl-" + result.all.id,
+                    "model": "gpt-4",
+                    "object": "chat.completion",
+                    "system_fingerprint": null,
+                    "usage": {
+                        "prompt_tokens":0,
+                        "completion_tokens":0,
+                        "total_tokens":0
                     }
-                }],
-                "created": new Date(result.all.update_time).getTime(),
-                "id": "chatcmpl-" + result.all.id,
-                "model": "gpt-4",
-                "object": "chat.completion",
-                "system_fingerprint": null,
-                "usage":{
-                    "completion_tokens":0,
-                    "prompt_tokens":0,
-                    "total_tokens":0
                 }
-            });
+                
+                res.json(response);
 
-            browserManager.markPageAsIdle(chatGPTPage);
+                logger.debug("response: " + response);
+                logger.info("response message: " + msg);
+
+                browserManager.markPageAsIdle(chatGPTPage);
+            } else if (req.body.stream){ // stream
+                const result = await chatGPTPage.evaluate(async () => {
+                    await chatgpt.isIdle();
+                    return {
+                        all: await chatgpt.getChatData('active', 'all', 'chatgpt', 'latest'),
+                        msg: await chatgpt.getChatData('active', 'msg', 'chatgpt', 'latest')
+                    };
+                });
+    
+                let msg = Array.isArray(result.msg) ? result.msg.join("\n") : result.msg
+
+    
+                res.setHeader('Content-Type', 'text/event-stream');
+                res.setHeader('Cache-Control', 'no-cache');
+                res.setHeader('Connection', 'keep-alive');
+    
+                let response = JSON.stringify({
+                    "choices": [{
+                        "index": 0,
+                        "finish_reason": "stop",
+                        "delta": {
+                            "role": "assistant",
+                            "content": msg
+                        }
+                    }],
+                    "created": new Date(result.all.update_time).getTime(),
+                    "id": "chatcmpl-" + result.all.id,
+                    "model": "gpt-4",
+                    "object": "chat.completion",
+                    "system_fingerprint": null,
+                    "usage": {
+                        "prompt_tokens": 0,
+                        "completion_tokens": 0,
+                        "total_tokens": 0
+                    }
+                })
+                res.write("data: " + response + "\n\n");
+                
+    
+                res.write('data: [DONE]')
+                res.end();
+
+                logger.debug("response: " + response);
+                logger.info("response message: " + msg);
+    
+                browserManager.markPageAsIdle(chatGPTPage);
+            }
+
         } catch (error) {
             logger.error(error);
             browserManager.markPageAsIdle(chatGPTPage);
@@ -72,6 +132,7 @@ async function completions(browser) {
 
         req.on('close', async () => {
             logger.info("stop");
+            res.end();
             await chatGPTPage.evaluate(async () => {
                 await chatgpt.stop();
             });

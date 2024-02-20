@@ -4,6 +4,7 @@ const {
 } = require('./puppeteer');
 const config = require("../config");
 const logger = require('./log');
+const e = require('cors');
 
 
 async function login() {
@@ -41,8 +42,8 @@ async function login() {
         });
 
         await Promise.race([
-            chatGPTPage.waitForSelector('#__next button:nth-child(1)').then(() => isLogin = 0),
-            chatGPTPage.waitForSelector('#__next > div.relative.z-0.flex.h-full.w-full.overflow-hidden > div.relative.flex.h-full.max-w-full.flex-1.flex-col.overflow-hidden > main > div.flex.h-full.flex-col > div.flex-1.overflow-hidden > div > div.absolute.left-0.right-0 > div > div.flex.items-center.gap-2').then(() => isLogin = 1)
+            chatGPTPage.waitForSelector('#__next button:nth-child(1)', {timeout: 2000}).then(() => isLogin = 0),
+            chatGPTPage.waitForSelector('#__next > div.relative.z-0.flex.h-full.w-full.overflow-hidden > div.relative.flex.h-full.max-w-full.flex-1.flex-col.overflow-hidden > main > div.flex.h-full.flex-col > div.flex-1.overflow-hidden > div > div.absolute.left-0.right-0 > div > div.flex.items-center.gap-2', {timeout: 2000}).then(() => isLogin = 1)
         ]);
 
         const pages = await browser.pages();
@@ -100,13 +101,17 @@ async function login() {
 
         let textareaSelector = '#prompt-textarea';
         await waitForSelector(chatGPTPage, textareaSelector);
-        const statusCode = await chatGPTPage.waitForFunction(() => {
+        try{
+            const statusCode = await chatGPTPage.waitForFunction(() => {
             return window.sessionStatuscode === 200 || window.sessionStatuscode === 429;
         }, {
-            timeout: config.timeout
+            timeout: config.timeout / 5
         }).then(() => chatGPTPage.evaluate(() => window.sessionStatuscode));
         if (statusCode === 429) {
             logger.warn('429 Too Many Requests');
+            process.exit(1);
+        }} catch (error) {
+
         }
 
         return browser;

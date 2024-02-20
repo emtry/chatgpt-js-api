@@ -819,6 +819,46 @@ const chatgpt = {
                 xhr.send();
         });};
 
+        //get download_url
+        function download_url(assetPointer) {
+            return new Promise(resolve => {
+                chatgpt.getAccessToken().then(async token => {
+                    const regex = /file-service:\/\/(file-[A-Za-z0-9]+)/;
+                    const matches = assetPointer.content.parts[0].asset_pointer.match(regex);
+        
+                    if (matches && matches.length > 1) {
+                        const fileId = matches[1];
+                        var xhr = new XMLHttpRequest();
+                        xhr.open('GET', 'https://chat.openai.com/backend-api/files/' + fileId + '/download', true);
+                        xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+        
+                        xhr.onload = function() {
+                            if (this.status >= 200 && this.status < 300) {
+                                var response = JSON.parse(xhr.responseText);
+                                if (response.status === 'success') {
+                                    console.log('Download URL:', response.download_url);
+                                    resolve('![image](' + response.download_url + ')');
+                                } else {
+                                    console.error('Request completed but status is not success');
+                                    resolve();
+                                }
+                            } else {
+                                console.error('Request failed with status: ' + this.status);
+                                resolve();
+                            }
+                        };
+        
+                        xhr.onerror = function() {
+                            console.error('Request failed');
+                            resolve();
+                        };
+        
+                        xhr.send();
+                    }
+                });
+            });
+        }
+
         const getChatMsgs = token => {
             return new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
@@ -826,7 +866,7 @@ const chatgpt = {
                     xhr.open('GET', `${endpoints.openAI.chat}/${chat.id}`, true);
                     xhr.setRequestHeader('Content-Type', 'application/json');
                     xhr.setRequestHeader('Authorization', 'Bearer ' + token);
-                    xhr.onload = () => {
+                    xhr.onload = async () => {
                         if (xhr.status !== 200) return reject('🤖 chatgpt.js >> Request failed. Cannot retrieve chat messages.');
 
                         // Init const's
@@ -848,6 +888,7 @@ const chatgpt = {
                             let sub = [];
                             let temp_parentid = userMessage.id;
                             for (const key in data) {
+                                // console.log(data[key].message);
                                 if (data[key].message != null && (data[key].message.author.role == 'assistant' || data[key].message.author.role == 'tool') && data[key].parent == temp_parentid) {
                                     sub.push(data[key].message);
                                     temp_parentid = data[key].id;
@@ -855,15 +896,24 @@ const chatgpt = {
                             }
                             sub.push();
                             sub.sort((a, b) => a.create_time - b.create_time); // sort in chronological order
-                            sub = sub.map(x => { // pull out msgs after sorting
+                            sub = await Promise.all(sub.map(async x => { // 使用 Promise.all 来处理所有的异步操作
                                 switch(x.content.content_type) {
-                                    case 'text': return x.content.parts[0];
-                                    case 'code': return "```\n" + x.content.text + "\n```";
-                                    case 'execution_output': return "`Result:` \n```\n" + x.content.text + "\n```";
-                                    case 'multimodal_text': return x.content.parts[0].asset_pointer;
-                                    default: return;
+                                    case 'text': 
+                                        if (x.author.name != 'dalle.text2im') { 
+                                            return x.content.parts[0]; 
+                                        } else { 
+                                            return; 
+                                        }
+                                    case 'code': 
+                                        return "```\n" + x.content.text + "\n```";
+                                    case 'execution_output': 
+                                        return "`Result:` \n```\n" + x.content.text + "\n```";
+                                    case 'multimodal_text': 
+                                        return await download_url(x); 
+                                    default: 
+                                        return;
                                 }
-                            });
+                            }));
                             sub = sub.length === 1 ? sub[0] : sub; // convert not regenerated responses to strings
                             chatGPTMessages.push(sub); // array of arrays (length > 1 = regenerated responses)
                         }
