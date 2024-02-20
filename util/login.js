@@ -177,6 +177,7 @@ async function insertText(page, selector, text) {
         await page.type(selector, text);
     } catch (error) {
         logger.error(error);
+        process.exit(1);
     }
 }
 
