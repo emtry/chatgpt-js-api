@@ -78,7 +78,7 @@ async function completions(browser) {
 
                 browserManager.markPageAsIdle(chatGPTPage);
             } else if (req.body.stream){ // stream
-                const keepAliveInterval = 30000; // 30秒发送一次心跳
+                const keepAliveInterval = 45000; // 45秒发送一次心跳
 
                 // 设置SSE响应头
                 res.setHeader('Content-Type', 'text/event-stream');
