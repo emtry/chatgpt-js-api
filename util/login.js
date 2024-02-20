@@ -50,8 +50,12 @@ async function login() {
         });
 
         await Promise.race([
-            chatGPTPage.waitForSelector('#__next button:nth-child(1)', {timeout: 2000}).then(() => isLogin = 0),
-            chatGPTPage.waitForSelector('#__next > div.relative.z-0.flex.h-full.w-full.overflow-hidden > div.relative.flex.h-full.max-w-full.flex-1.flex-col.overflow-hidden > main > div.flex.h-full.flex-col > div.flex-1.overflow-hidden > div > div.absolute.left-0.right-0 > div > div.flex.items-center.gap-2', {timeout: 2000}).then(() => isLogin = 1)
+            chatGPTPage.waitForSelector('#__next button:nth-child(1)', {
+                timeout: 2000
+            }).then(() => isLogin = 0),
+            chatGPTPage.waitForSelector('#__next > div.relative.z-0.flex.h-full.w-full.overflow-hidden > div.relative.flex.h-full.max-w-full.flex-1.flex-col.overflow-hidden > main > div.flex.h-full.flex-col > div.flex-1.overflow-hidden > div > div.absolute.left-0.right-0 > div > div.flex.items-center.gap-2', {
+                timeout: 2000
+            }).then(() => isLogin = 1)
         ]);
 
         const pages = await browser.pages();
@@ -61,8 +65,12 @@ async function login() {
                 await pages[i].close();
             }
         }
-        
-        try {await chatGPTPage.waitForSelector('#__next > div.relative.z-0.flex.h-full.w-full.overflow-hidden > div.relative.flex.h-full.max-w-full.flex-1.flex-col.overflow-hidden > main > div.flex.h-full.flex-col > div.flex-1.overflow-hidden > div > div.absolute.left-0.right-0 > div > div.flex.items-center.gap-2', {timeout: 2000}).then(() => isLogin = 1);} catch (error) {}
+
+        try {
+            await chatGPTPage.waitForSelector('#__next > div.relative.z-0.flex.h-full.w-full.overflow-hidden > div.relative.flex.h-full.max-w-full.flex-1.flex-col.overflow-hidden > main > div.flex.h-full.flex-col > div.flex-1.overflow-hidden > div > div.absolute.left-0.right-0 > div > div.flex.items-center.gap-2', {
+                timeout: 2000
+            }).then(() => isLogin = 1);
+        } catch (error) {}
 
 
         if (isLogin == 0) {
@@ -105,14 +113,13 @@ async function login() {
         }
 
 
-        await executeWithRetry(chatGPTPage).then(() => {
-          }).catch(error => {
+        await executeWithRetry(chatGPTPage).then(() => {}).catch(error => {
             logger.error('exit');
-          });
+        });
 
 
         return browser;
-        
+
     } catch (error) {
         logger.error(error);
         process.exit(1);
@@ -120,38 +127,42 @@ async function login() {
 }
 
 
-async function executeWithRetry(chatGPTPage,maxRetries = 5) {
+async function executeWithRetry(chatGPTPage, maxRetries = 5) {
     let retries = 0;
     let textareaSelector = '#prompt-textarea';
-  
+
     async function attemptRequest() {
-      await waitForSelector(chatGPTPage, textareaSelector);
-      try {
-        const statusCode = await chatGPTPage.waitForFunction(() => {
-          return window.sessionStatuscode === 200 || window.sessionStatuscode === 429 || window.sessionStatuscode === 401;
-        }, {
-          timeout: config.timeout
-        }).then(() => chatGPTPage.evaluate(() => window.sessionStatuscode));
-  
-        if (statusCode === 200) {
-        } else if (statusCode === 429 || statusCode === 401) {
-          throw new Error(`Received status code: ${statusCode}`);
+        await waitForSelector(chatGPTPage, textareaSelector);
+        try {
+            const statusCode = await chatGPTPage.waitForFunction(() => {
+                return window.sessionStatuscode === 200 || window.sessionStatuscode === 429 || window.sessionStatuscode === 401;
+            }, {
+                timeout: config.timeout / 5
+            }).then(() => chatGPTPage.evaluate(() => window.sessionStatuscode));
+
+            if (statusCode === 200) {} else if (statusCode === 429 || statusCode === 401) {
+                throw new Error(`Received status code: ${statusCode}`);
+            }
+        } catch (error) {
+            if ((error.message.includes('429') || error.message.includes('401')) && retries < maxRetries) {
+                logger.warn('429 Too Many Requests');
+                await new Promise(resolve => setTimeout(resolve, 60000));
+                retries++;
+                await chatGPTPage.goto("https://chat.openai.com");
+                await attemptRequest();
+            } else if (retries < maxRetries) {
+                retries++;
+                await chatGPTPage.goto("https://chat.openai.com");
+                await attemptRequest();
+            } else {
+                throw error;
+            }
         }
-      } catch (error) {
-        if ((error.message.includes('429') || error.message.includes('401')) && retries < maxRetries) {
-          logger.warn('429 Too Many Requests');
-          await new Promise(resolve => setTimeout(resolve, 60000)); 
-          retries++;
-          await chatGPTPage.goto("https://chat.openai.com");
-          await attemptRequest(); 
-        } else {
-          throw error;
-        }
-      }
     }
-  
+
     await attemptRequest();
-  }
+}
+
 
 async function waitForSelector(page, selector) {
     // 初始化点计数器
