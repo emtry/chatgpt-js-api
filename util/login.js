@@ -38,6 +38,14 @@ async function login() {
                         window.sessionStatuscode = status;
                     }, status);
                 }
+            } else if (url.includes('https://chat.openai.com/backend-api/ua/models')) {
+                const status = response.status();
+                if (status === 200 || status === 401) {
+                    // 设置标志变量
+                    await chatGPTPage.evaluate((status) => {
+                        window.sessionStatuscode = status;
+                    }, status);
+                }
             }
         });
 
@@ -97,22 +105,11 @@ async function login() {
         }
 
 
+        await executeWithRetry(chatGPTPage).then(() => {
+          }).catch(error => {
+            logger.error('exit');
+          });
 
-
-        let textareaSelector = '#prompt-textarea';
-        await waitForSelector(chatGPTPage, textareaSelector);
-        try{
-            const statusCode = await chatGPTPage.waitForFunction(() => {
-            return window.sessionStatuscode === 200 || window.sessionStatuscode === 429;
-        }, {
-            timeout: config.timeout / 5
-        }).then(() => chatGPTPage.evaluate(() => window.sessionStatuscode));
-        if (statusCode === 429) {
-            logger.warn('429 Too Many Requests');
-            process.exit(1);
-        }} catch (error) {
-
-        }
 
         return browser;
         
@@ -122,6 +119,39 @@ async function login() {
     }
 }
 
+
+async function executeWithRetry(chatGPTPage,maxRetries = 5) {
+    let retries = 0;
+    let textareaSelector = '#prompt-textarea';
+  
+    async function attemptRequest() {
+      await waitForSelector(chatGPTPage, textareaSelector);
+      try {
+        const statusCode = await chatGPTPage.waitForFunction(() => {
+          return window.sessionStatuscode === 200 || window.sessionStatuscode === 429 || window.sessionStatuscode === 401;
+        }, {
+          timeout: config.timeout
+        }).then(() => chatGPTPage.evaluate(() => window.sessionStatuscode));
+  
+        if (statusCode === 200) {
+        } else if (statusCode === 429 || statusCode === 401) {
+          throw new Error(`Received status code: ${statusCode}`);
+        }
+      } catch (error) {
+        if ((error.message.includes('429') || error.message.includes('401')) && retries < maxRetries) {
+          logger.warn('429 Too Many Requests');
+          await new Promise(resolve => setTimeout(resolve, 60000)); 
+          retries++;
+          await chatGPTPage.goto("https://chat.openai.com");
+          await attemptRequest(); 
+        } else {
+          throw error;
+        }
+      }
+    }
+  
+    await attemptRequest();
+  }
 
 async function waitForSelector(page, selector) {
     // 初始化点计数器
