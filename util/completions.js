@@ -92,7 +92,7 @@ async function completions(browser) {
                         "finish_reason": null,
                         "delta": {
                             "role": "assistant",
-                            "content": "1"
+                            "content": "."
                         }
                     }],
                     "created": null,
