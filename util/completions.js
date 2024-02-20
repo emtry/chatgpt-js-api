@@ -78,32 +78,25 @@ async function completions(browser) {
 
                 browserManager.markPageAsIdle(chatGPTPage);
             } else if (req.body.stream){ // stream
-                const result = await chatGPTPage.evaluate(async () => {
-                    await chatgpt.isIdle();
-                    return {
-                        all: await chatgpt.getChatData('active', 'all', 'chatgpt', 'latest'),
-                        msg: await chatgpt.getChatData('active', 'msg', 'chatgpt', 'latest')
-                    };
-                });
-    
-                let msg = Array.isArray(result.msg) ? result.msg.join("\n") : result.msg
+                const keepAliveInterval = 30000; // 30秒发送一次心跳
 
-    
+                // 设置SSE响应头
                 res.setHeader('Content-Type', 'text/event-stream');
                 res.setHeader('Cache-Control', 'no-cache');
                 res.setHeader('Connection', 'keep-alive');
-    
-                let response = JSON.stringify({
+                
+                let msg;
+                let response = {
                     "choices": [{
                         "index": 0,
-                        "finish_reason": "stop",
+                        "finish_reason": null,
                         "delta": {
                             "role": "assistant",
-                            "content": msg
+                            "content": "1"
                         }
                     }],
-                    "created": new Date(result.all.update_time).getTime(),
-                    "id": "chatcmpl-" + result.all.id,
+                    "created": null,
+                    "id": null,
                     "model": "gpt-4",
                     "object": "chat.completion",
                     "system_fingerprint": null,
@@ -112,17 +105,50 @@ async function completions(browser) {
                         "completion_tokens": 0,
                         "total_tokens": 0
                     }
-                })
-                res.write("data: " + response + "\n\n");
-                
-    
-                res.write('data: [DONE]')
-                res.end();
+                };
 
-                logger.debug("response: " + JSON.stringify(response));
-                logger.info("response message: " + msg);
-    
-                browserManager.markPageAsIdle(chatGPTPage);
+                // 发送心跳的函数
+                const sendHeartbeat = () => {
+                    res.write("data: "+ JSON.stringify(response) + "\n\n");
+                };
+                
+                // 开始定时发送心跳
+                const heartbeatInterval = setInterval(sendHeartbeat, keepAliveInterval);
+                
+                try {
+                    const result = await chatGPTPage.evaluate(async () => {
+                        await chatgpt.isIdle();
+                        return {
+                            all: await chatgpt.getChatData('active', 'all', 'chatgpt', 'latest'),
+                            msg: await chatgpt.getChatData('active', 'msg', 'chatgpt', 'latest')
+                        };
+                    });
+                    
+                    msg = Array.isArray(result.msg) ? result.msg.join("\n") : result.msg;
+                    
+                    response.choices[0].finish_reason = "stop";
+                    response.choices[0].delta.content = msg;
+                    response.created = new Date(result.all.update_time).getTime();
+                    response.id = result.all.id;
+                    
+                    // 发送响应数据
+                    res.write("data: "+ JSON.stringify(response) + "\n\n");
+                } catch (error) {
+                    // 记录错误并发送错误信息
+                    logger.error(error);
+                } finally {
+                    clearInterval(heartbeatInterval);
+                    res.write('data: [DONE]')
+                    res.end();
+                    
+                    // 记录响应和消息
+                    logger.debug("response: " + JSON.stringify(response));
+                    logger.debug('22222'+msg+'\n')
+                    logger.info("response message: " + msg);
+                    
+                    // 标记页面为闲置，以供再次使用
+                    browserManager.markPageAsIdle(chatGPTPage);
+                }
             }
 
         } catch (error) {
