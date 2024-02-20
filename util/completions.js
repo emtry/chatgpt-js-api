@@ -143,7 +143,6 @@ async function completions(browser) {
                     
                     // 记录响应和消息
                     logger.debug("response: " + JSON.stringify(response));
-                    logger.debug('22222'+msg+'\n')
                     logger.info("response message: " + msg);
                     
                     // 标记页面为闲置，以供再次使用
