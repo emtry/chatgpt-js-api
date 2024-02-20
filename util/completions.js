@@ -28,7 +28,7 @@ async function completions(browser) {
         const chatGPTPage = await browserManager.getFreePage();
         try {
             await chatGPTPage.evaluate(async (reqbody) => {
-                await chatgpt.sendInNewChat(JSON.stringify(reqbody.messages));
+                await chatgpt.send(JSON.stringify(reqbody.messages));
             }, req.body);
 
             await new Promise((resolve) => {
@@ -119,7 +119,7 @@ async function completions(browser) {
                 res.write('data: [DONE]')
                 res.end();
 
-                logger.debug("response: " + response);
+                logger.debug("response: " + JSON.stringify(response));
                 logger.info("response message: " + msg);
     
                 browserManager.markPageAsIdle(chatGPTPage);
